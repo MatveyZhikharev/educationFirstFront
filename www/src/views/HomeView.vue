@@ -94,8 +94,8 @@ onMounted(fetchBlocks)
             </div>
             <h5 class="item-header">{{ block.title }}</h5>
           </div>
-          <p v-if="!blocks.length" class="status-text">Опубликованные блоки не найдены.</p>
         </div>
+        <p v-if="!isLoading && !blocks.length" class="status-text">Опубликованные блоки не найдены.</p>
       </section>
     </div>
   </div>

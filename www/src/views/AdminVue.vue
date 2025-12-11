@@ -78,6 +78,25 @@ const newVideoFile = ref<File | null>(null)
 
 const statusMessage = ref('')
 
+const formatPaymentDate = (value: string) =>
+  value ? new Date(value).toISOString() : ''
+
+const computeChunkSize = (data: unknown): number => {
+  if (Array.isArray((data as any)?.encryptedData)) {
+    return (data as any).encryptedData.length
+  }
+  if (typeof (data as any)?.encryptedData === 'string') {
+    return (data as any).encryptedData.length
+  }
+  if (typeof (data as any)?.byteLength === 'number') {
+    return (data as any).byteLength
+  }
+  if (Array.isArray(data)) {
+    return data.length
+  }
+  return 0
+}
+
 const streamUrl = computed(() => (selectedVideoId.value != null ? streamVideoUrl(selectedVideoId.value) : ''))
 
 const loadBlocks = async () => {
@@ -195,7 +214,7 @@ const patchUser = async () => {
   const payload: Record<string, unknown> = {}
   Object.entries(userUpdate).forEach(([key, value]) => {
     if (value !== '' && value !== null && value !== undefined) {
-      payload[key] = key === 'paymentDate' ? new Date(value as string).toISOString() : value
+      payload[key] = key === 'paymentDate' ? formatPaymentDate(value as string) : value
     }
   })
 
@@ -249,15 +268,7 @@ const fetchChunk = async () => {
   if (selectedVideoId.value == null) return
   try {
     const { data } = await apiClient.getVideoChunk(selectedVideoId.value, chunkIndex.value)
-    const size = Array.isArray(data?.encryptedData)
-      ? data.encryptedData.length
-      : typeof data?.encryptedData === 'string'
-        ? data.encryptedData.length
-        : typeof data?.byteLength === 'number'
-          ? data.byteLength
-          : Array.isArray(data)
-            ? data.length
-            : 0
+    const size = computeChunkSize(data)
     chunkMessage.value = `Чанк ${data?.chunkIndex ?? chunkIndex.value}: получено ${size} байт`
   } catch (e: unknown) {
     videoError.value = resolveError(e, 'Не удалось получить чанк')
@@ -408,15 +419,19 @@ onMounted(() => {
               <th>Email</th>
               <th>Роль</th>
               <th>Статус</th>
+              <th>Выбрать</th>
             </tr>
             </thead>
             <tbody>
-            <tr v-for="user in users" :key="user.id" @click="selectedUserId = user.id" :class="{ selected: selectedUserId === user.id }">
+            <tr v-for="user in users" :key="user.id" :class="{ selected: selectedUserId === user.id }">
               <td>{{ user.id }}</td>
               <td>{{ user.firstName }} {{ user.lastName }}</td>
               <td>{{ user.email }}</td>
               <td>{{ user.role }}</td>
               <td>{{ user.status }}</td>
+              <td>
+                <button class="secondary" @click="selectedUserId = user.id">Выбрать</button>
+              </td>
             </tr>
             </tbody>
           </table>
