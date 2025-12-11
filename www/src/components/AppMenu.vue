@@ -9,7 +9,7 @@ const menuItems = [
   { to: '/courses', label: 'Каталог курсов', icon: new URL('../assets/catalog.png', import.meta.url).href },
   { to: '/sales', label: 'Акции', icon: new URL('../assets/sale.png', import.meta.url).href },
   { to: '/profile', label: 'Профиль', icon: new URL('../assets/profile.png', import.meta.url).href },
-  { to: '/admin', label: 'Админ', icon: new URL('../assets/profile.png', import.meta.url).href },
+  { to: '/admin', label: 'Админ', icon: new URL('../assets/catalog.png', import.meta.url).href },
 ]
 </script>
 

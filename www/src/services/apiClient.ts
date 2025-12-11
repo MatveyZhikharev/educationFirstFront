@@ -9,6 +9,7 @@ export const blockImageUrl = (blockId: number | string) => `/api/blocks/${blockI
 export const streamVideoUrl = (videoId: number | string) => `/api/v1/videos/${videoId}/stream`
 
 const withDeviceId = (deviceId?: string) => ({ device_id: deviceId })
+const HTTP_CLIENT_ERROR_THRESHOLD = 400
 
 export const apiClient = {
   // Public blocks
@@ -51,7 +52,7 @@ export const apiClient = {
       // VK колбэк отдаёт редирект в браузер, а фронт вызывает его для проверки.
       // Отключаем авто-редиректы и разрешаем 3xx, чтобы вручную обработать ответ без смены location.
       maxRedirects: 0,
-      validateStatus: (status) => status < 400,
+      validateStatus: (status) => status < HTTP_CLIENT_ERROR_THRESHOLD,
     }),
 
   // Videos

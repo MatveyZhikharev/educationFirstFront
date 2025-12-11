@@ -84,14 +84,15 @@ const isChunkResponse = (data: unknown): data is ChunkResponse =>
 const formatPaymentDate = (value: string) => (value ? new Date(value).toISOString() : '')
 
 const computeChunkSize = (data: unknown): number => {
+  let size = 0
   if (isChunkResponse(data)) {
-    if (Array.isArray(data.encryptedData)) return data.encryptedData.length
-    if (typeof data.encryptedData === 'string') return data.encryptedData.length
-    if (typeof data.byteLength === 'number') return data.byteLength
+    if (Array.isArray(data.encryptedData)) size = data.encryptedData.length
+    else if (typeof data.encryptedData === 'string') size = data.encryptedData.length
+    else if (typeof data.byteLength === 'number') size = data.byteLength
   } else if (Array.isArray(data)) {
-    return data.length
+    size = data.length
   }
-  return 0
+  return size
 }
 
 const streamUrl = computed(() => (selectedVideoId.value != null ? streamVideoUrl(selectedVideoId.value) : ''))
