@@ -46,7 +46,8 @@ export const apiClient = {
         state: params.state,
         device_id: params.deviceId,
       },
-      // VK колбэк может отдавать редирект, поэтому отключаем авто-редиректы и считаем 3xx валидными
+      // VK колбэк отдаёт редирект в браузер, а фронт вызывает его для проверки.
+      // Отключаем авто-редиректы и разрешаем 3xx, чтобы вручную обработать ответ без смены location.
       maxRedirects: 0,
       validateStatus: (status) => status < 400,
     }),

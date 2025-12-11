@@ -93,8 +93,6 @@ onMounted(fetchBlocks)
               <img :src="blockImageUrl(block.id)" alt="cover" class="item-image" />
             </div>
             <h5 class="item-header">{{ block.title }}</h5>
-            <p class="item-description">Сортировка: {{ block.sortOrder ?? '—' }}</p>
-            <p class="item-description">Доступен: {{ block.isAvailable ? 'да' : 'нет' }}</p>
           </div>
           <p v-if="!blocks.length" class="status-text">Опубликованные блоки не найдены.</p>
         </div>

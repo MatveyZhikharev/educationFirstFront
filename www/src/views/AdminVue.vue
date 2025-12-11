@@ -194,7 +194,7 @@ const patchUser = async () => {
   if (!selectedUserId.value) return
   const payload: Record<string, unknown> = {}
   Object.entries(userUpdate).forEach(([key, value]) => {
-    if (value) {
+    if (value !== '' && value !== null && value !== undefined) {
       payload[key] = key === 'paymentDate' ? new Date(value as string).toISOString() : value
     }
   })
@@ -249,14 +249,15 @@ const fetchChunk = async () => {
   if (selectedVideoId.value == null) return
   try {
     const { data } = await apiClient.getVideoChunk(selectedVideoId.value, chunkIndex.value)
-    let size = 0
-    if (data?.encryptedData) {
-      size = data.encryptedData.length
-    } else if (data?.byteLength) {
-      size = data.byteLength
-    } else if (Array.isArray(data)) {
-      size = data.length
-    }
+    const size = Array.isArray(data?.encryptedData)
+      ? data.encryptedData.length
+      : typeof data?.encryptedData === 'string'
+        ? data.encryptedData.length
+        : typeof data?.byteLength === 'number'
+          ? data.byteLength
+          : Array.isArray(data)
+            ? data.length
+            : 0
     chunkMessage.value = `Чанк ${data?.chunkIndex ?? chunkIndex.value}: получено ${size} байт`
   } catch (e: unknown) {
     videoError.value = resolveError(e, 'Не удалось получить чанк')
