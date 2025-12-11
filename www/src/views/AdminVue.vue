@@ -1,379 +1,703 @@
-<script lang="ts">
-export default {
-  data() {
-    return {
-      course: {
-        title: "Основы ремонта техники",
-        description: "Научитесь ремонтировать технику, используя отвертку, руки и силу мыслей",
-        duration: "24 часа",
-        level: "Начальный",
-        studentsCount: 1245
-      },
-      materials: [
-        {
-          title: "Знакомство",
-          description: "Вводный урок по ремонту техники",
-          duration: "48:52"
-        },
-        {
-          title: "Устройство смартфона",
-          description: "Изучаем внутреннее устройство",
-          duration: "1:30:00"
-        },
-        {
-          title: "Работа с инструментами",
-          description: "Основные инструменты ремонтника",
-          duration: "45:15"
-        },
-        {
-          title: "Диагностика неисправностей",
-          description: "Как найти проблему",
-          duration: "1:15:30"
-        }
-      ],
-      newMaterial: {
-        title: "",
-        description: "",
-        duration: ""
-      },
-      isEditing: false
-    }
-  },
-  methods: {
-    addMaterial() {
-      if (this.newMaterial.title) {
-        this.materials.push({ ...this.newMaterial })
-        this.newMaterial = { title: "", description: "", duration: "" }
-      }
-    },
-    removeMaterial(index: number) {
-      this.materials.splice(index, 1)
-    },
-    saveCourse() {
-      this.isEditing = false
-      // Здесь будет логика сохранения
-      console.log("Курс сохранен:", this.course)
-    },
-    editCourse() {
-      this.isEditing = true
-    }
+<script setup lang="ts">
+import { computed, onMounted, reactive, ref } from 'vue'
+import { apiClient, blockImageUrl, streamVideoUrl } from '@/services/apiClient'
+
+type BlockResponse = {
+  id: number
+  title: string
+  sortOrder: number
+  isAvailable: boolean
+  testId?: number | null
+}
+
+type UserResponse = {
+  id: string
+  firstName?: string
+  lastName?: string
+  email?: string
+  role?: string
+  status?: string
+  paymentDate?: string
+}
+
+type VideoResponse = {
+  id: number
+  title: string
+  description?: string
+  formattedDuration?: string
+  formattedFileSize?: string
+}
+
+type VideoInfoResponse = {
+  id: number
+  title: string
+  description?: string
+  formattedDuration?: string
+  formattedFileSize?: string
+  mimeType?: string
+  totalChunks?: number
+  isReady?: boolean
+}
+
+const adminBlocks = ref<BlockResponse[]>([])
+const blocksError = ref('')
+const isLoadingBlocks = ref(false)
+const newBlockTitle = ref('')
+const updatePayload = reactive({ blockId: '', title: '' })
+const swapPayload = reactive({ firstId: '', secondId: '' })
+const uploadPayload = reactive<{ blockId: string; image: File | null; video: File | null }>({
+  blockId: '',
+  image: null,
+  video: null,
+})
+
+const users = ref<UserResponse[]>([])
+const page = ref(0)
+const size = ref(5)
+const userError = ref('')
+const selectedUserId = ref('')
+const userUpdate = reactive({
+  firstName: '',
+  lastName: '',
+  email: '',
+  status: '',
+  role: '',
+  paymentDate: '',
+})
+
+const videos = ref<VideoResponse[]>([])
+const videoInfo = ref<VideoInfoResponse | null>(null)
+const selectedVideoId = ref<number | null>(null)
+const videoError = ref('')
+const chunkIndex = ref(0)
+const chunkMessage = ref('')
+const contentType = ref('')
+const newVideo = reactive({ title: '', description: '' })
+const newVideoFile = ref<File | null>(null)
+
+const statusMessage = ref('')
+
+const streamUrl = computed(() => (selectedVideoId.value != null ? streamVideoUrl(selectedVideoId.value) : ''))
+
+const loadBlocks = async () => {
+  isLoadingBlocks.value = true
+  blocksError.value = ''
+  try {
+    const { data } = await apiClient.getAdminBlocks()
+    adminBlocks.value = data
+  } catch (e: any) {
+    blocksError.value = e?.response?.data?.message || 'Не удалось загрузить блоки'
+  } finally {
+    isLoadingBlocks.value = false
   }
 }
+
+const createBlock = async () => {
+  if (!newBlockTitle.value) return
+  try {
+    await apiClient.addBlock({ title: newBlockTitle.value })
+    newBlockTitle.value = ''
+    statusMessage.value = 'Блок создан'
+    await loadBlocks()
+  } catch (e: any) {
+    statusMessage.value = e?.response?.data?.message || 'Ошибка создания блока'
+  }
+}
+
+const toggleBlockStatus = async (blockId: number) => {
+  try {
+    await apiClient.toggleBlockStatus(blockId)
+    statusMessage.value = 'Статус блока обновлён'
+    await loadBlocks()
+  } catch (e: any) {
+    statusMessage.value = e?.response?.data?.message || 'Не удалось изменить статус блока'
+  }
+}
+
+const removeBlock = async (blockId: number) => {
+  try {
+    await apiClient.deleteBlock(blockId)
+    statusMessage.value = 'Блок удалён'
+    await loadBlocks()
+  } catch (e: any) {
+    statusMessage.value = e?.response?.data?.message || 'Не удалось удалить блок'
+  }
+}
+
+const swapBlocksAction = async () => {
+  if (!swapPayload.firstId || !swapPayload.secondId) return
+  try {
+    await apiClient.swapBlocks(Number(swapPayload.firstId), Number(swapPayload.secondId))
+    statusMessage.value = 'Блоки поменяны местами'
+    await loadBlocks()
+  } catch (e: any) {
+    statusMessage.value = e?.response?.data?.message || 'Не удалось поменять блоки местами'
+  }
+}
+
+const updateBlockText = async () => {
+  if (!updatePayload.blockId || !updatePayload.title) return
+  try {
+    await apiClient.updateBlockText({
+      blockId: Number(updatePayload.blockId),
+      title: updatePayload.title,
+    })
+    statusMessage.value = 'Блок обновлён'
+    await loadBlocks()
+  } catch (e: any) {
+    statusMessage.value = e?.response?.data?.message || 'Не удалось обновить блок'
+  }
+}
+
+const uploadBlockImage = async () => {
+  if (!uploadPayload.blockId || !uploadPayload.image) return
+  try {
+    await apiClient.updateBlockImage(Number(uploadPayload.blockId), uploadPayload.image)
+    statusMessage.value = 'Изображение обновлено'
+  } catch (e: any) {
+    statusMessage.value = e?.response?.data?.message || 'Не удалось загрузить изображение'
+  }
+}
+
+const uploadBlockVideo = async () => {
+  if (!uploadPayload.blockId || !uploadPayload.video) return
+  try {
+    await apiClient.updateBlockVideo(Number(uploadPayload.blockId), uploadPayload.video)
+    statusMessage.value = 'Видео обновлено'
+  } catch (e: any) {
+    statusMessage.value = e?.response?.data?.message || 'Не удалось загрузить видео'
+  }
+}
+
+const onImageChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  uploadPayload.image = target.files?.[0] || null
+}
+
+const onBlockVideoChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  uploadPayload.video = target.files?.[0] || null
+}
+
+const loadUsers = async () => {
+  userError.value = ''
+  try {
+    const { data } = await apiClient.getUsers(page.value, size.value)
+    users.value = data?.content ?? data
+  } catch (e: any) {
+    userError.value = e?.response?.data?.message || 'Не удалось загрузить пользователей'
+  }
+}
+
+const patchUser = async () => {
+  if (!selectedUserId.value) return
+  const payload: Record<string, unknown> = {}
+  Object.entries(userUpdate).forEach(([key, value]) => {
+    if (value) {
+      payload[key] = key === 'paymentDate' ? new Date(value as string).toISOString() : value
+    }
+  })
+
+  if (!Object.keys(payload).length) {
+    statusMessage.value = 'Укажите поля для обновления'
+    return
+  }
+
+  try {
+    await apiClient.updateUser(selectedUserId.value, payload)
+    statusMessage.value = 'Пользователь обновлён'
+    await loadUsers()
+  } catch (e: any) {
+    statusMessage.value = e?.response?.data?.message || 'Не удалось обновить пользователя'
+  }
+}
+
+const loadVideos = async () => {
+  videoError.value = ''
+  try {
+    const { data } = await apiClient.getVideos()
+    videos.value = data
+  } catch (e: any) {
+    videoError.value = e?.response?.data?.message || 'Не удалось загрузить видео'
+  }
+}
+
+const fetchVideoDetails = async (videoId?: number | null) => {
+  const id = videoId ?? selectedVideoId.value
+  if (id == null) return
+  try {
+    const { data } = await apiClient.getVideoInfo(id)
+    videoInfo.value = data
+    selectedVideoId.value = id
+  } catch (e: any) {
+    videoError.value = e?.response?.data?.message || 'Не удалось получить информацию о видео'
+  }
+}
+
+const fetchContentType = async () => {
+  if (selectedVideoId.value == null) return
+  try {
+    const { data } = await apiClient.getVideoContentType(selectedVideoId.value)
+    contentType.value = data
+  } catch (e: any) {
+    videoError.value = e?.response?.data?.message || 'Не удалось получить content-type'
+  }
+}
+
+const fetchChunk = async () => {
+  if (selectedVideoId.value == null) return
+  try {
+    const { data } = await apiClient.getVideoChunk(selectedVideoId.value, chunkIndex.value)
+    let size = 0
+    if (data?.encryptedData) {
+      size = data.encryptedData.length
+    } else if (data?.byteLength) {
+      size = data.byteLength
+    } else if (Array.isArray(data)) {
+      size = data.length
+    }
+    chunkMessage.value = `Чанк ${data?.chunkIndex ?? chunkIndex.value}: получено ${size} байт`
+  } catch (e: any) {
+    videoError.value = e?.response?.data?.message || 'Не удалось получить чанк'
+  }
+}
+
+const onVideoFileChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  newVideoFile.value = target.files?.[0] || null
+}
+
+const uploadNewVideo = async () => {
+  if (!newVideoFile.value || !newVideo.title) {
+    statusMessage.value = 'Добавьте файл и название видео'
+    return
+  }
+  try {
+    await apiClient.uploadVideo(newVideoFile.value, newVideo.title, newVideo.description)
+    statusMessage.value = 'Видео загружено'
+    newVideoFile.value = null
+    newVideo.title = ''
+    newVideo.description = ''
+    await loadVideos()
+  } catch (e: any) {
+    statusMessage.value = e?.response?.data?.message || 'Не удалось загрузить видео'
+  }
+}
+
+onMounted(() => {
+  loadBlocks()
+  loadUsers()
+  loadVideos()
+})
 </script>
 
 <template>
-  <div class="course-container">
-    <div class="course-header">
-      <div v-if="!isEditing">
-        <h1 class="course-title">{{ course.title }}</h1>
-        <p class="course-description">{{ course.description }}</p>
-        <button @click="editCourse" class="edit-btn">Редактировать курс</button>
+  <div class="admin-container">
+    <div class="header">
+      <div>
+        <h1>Админ-панель</h1>
+        <p class="hint">
+          Здесь собраны действия, которые используют почти все эндпоинты: блоки, пользователи и потоковое видео.
+        </p>
       </div>
-      <div v-else>
-        <input v-model="course.title" class="course-title-input">
-        <textarea v-model="course.description" class="course-description-input"></textarea>
-      </div>
-
-      <div class="course-meta">
-        <div class="meta-tags">
-          <div class="meta-tag">
-            <span v-if="!isEditing">{{ course.duration }}</span>
-            <input v-else v-model="course.duration" class="meta-input">
-          </div>
-          <div class="meta-tag">
-            <span v-if="!isEditing">{{ course.level }}</span>
-            <select v-else v-model="course.level" class="meta-select">
-              <option>Начальный</option>
-              <option>Средний</option>
-              <option>Продвинутый</option>
-            </select>
-          </div>
-          <div class="meta-tag">
-            <span v-if="!isEditing">{{ course.studentsCount }} студентов</span>
-            <input v-else v-model="course.studentsCount" type="number" class="meta-input">
-          </div>
-        </div>
-
-        <div class="instructor-info">
-          <img
-              src="https://sun1-85.userapi.com/s/v1/ig2/JquCXZGJElIMQC952QDJEeZfTBDgu5OdiROVOHKdguWo_-LFtxR09nGwdXhMecxOvSH2y6bTIsxvDyi8NR8PGDF1.jpg?quality=95&crop=392,386,328,328&as=32x32,48x48,72x72,108x108,160x160,240x240&ava=1&u=Kx6FRuRqcgp0kBMoK6rQAqva5ZjWDneWjG7NIeBuqns&cs=400x400"
-              alt="Преподаватель" class="instructor-avatar">
-          <div class="instructor-details">
-            <h4 class="instructor-name">Вершинин Максим</h4>
-            <p class="instructor-description">Старший разработчик, гений и миллиардер.</p>
-          </div>
-        </div>
-      </div>
+      <p v-if="statusMessage" class="status">{{ statusMessage }}</p>
     </div>
 
-    <div class="course-content">
-      <section class="content-section">
-        <h2 class="section-title">Описание</h2>
-        <p v-if="!isEditing">{{ course.description }}</p>
-        <textarea v-else v-model="course.description" class="description-textarea"></textarea>
-      </section>
-
-      <section class="content-section">
-        <div class="section-header">
-          <h2 class="section-title">Материалы курса</h2>
-          <button v-if="isEditing" @click="saveCourse" class="save-btn">Сохранить</button>
+    <section class="admin-section">
+      <div class="section-header">
+        <div>
+          <h2>Блоки</h2>
+          <p class="hint">/api/blocks и /api/admin/blocks*</p>
         </div>
+        <button class="primary" @click="loadBlocks">Обновить</button>
+      </div>
 
-        <!-- Форма добавления нового материала -->
-        <div v-if="isEditing" class="add-material-form">
-          <h3>Добавить материал</h3>
-          <div class="form-row">
-            <input v-model="newMaterial.title" placeholder="Название урока" class="material-input">
-            <input v-model="newMaterial.duration" placeholder="Длительность (например: 45:00)" class="material-input">
+      <div class="grid">
+        <div class="card">
+          <h3>Создать блок</h3>
+          <input v-model="newBlockTitle" placeholder="Название блока">
+          <button class="primary" @click="createBlock">Создать</button>
+        </div>
+        <div class="card">
+          <h3>Обновить заголовок</h3>
+          <input v-model="updatePayload.blockId" placeholder="ID блока">
+          <input v-model="updatePayload.title" placeholder="Новое название">
+          <button class="primary" @click="updateBlockText">Сохранить</button>
+        </div>
+        <div class="card">
+          <h3>Поменять местами</h3>
+          <input v-model="swapPayload.firstId" placeholder="Первый блок ID">
+          <input v-model="swapPayload.secondId" placeholder="Второй блок ID">
+          <button class="primary" @click="swapBlocksAction">Поменять</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Загрузить медиа для блока</h3>
+        <div class="form-grid">
+          <label>
+            ID блока
+            <input v-model="uploadPayload.blockId" placeholder="ID блока">
+          </label>
+          <label>
+            Фото (PUT /image)
+            <input type="file" accept="image/*" @change="onImageChange">
+          </label>
+          <label>
+            Видео (PUT /video)
+            <input type="file" accept="video/*" @change="onBlockVideoChange">
+          </label>
+        </div>
+        <div class="actions">
+          <button class="secondary" @click="uploadBlockImage">Обновить фото</button>
+          <button class="secondary" @click="uploadBlockVideo">Обновить видео</button>
+        </div>
+      </div>
+
+      <div v-if="isLoadingBlocks" class="hint">Загружаем список блоков...</div>
+      <div v-else-if="blocksError" class="error">{{ blocksError }}</div>
+      <div class="block-list">
+        <div v-for="block in adminBlocks" :key="block.id" class="card block-card">
+          <div class="block-cover">
+            <img :src="blockImageUrl(block.id)" alt="block cover">
           </div>
-          <textarea v-model="newMaterial.description" placeholder="Описание урока" class="material-textarea"></textarea>
-          <button @click="addMaterial" class="add-btn">Добавить материал</button>
-        </div>
-
-        <div class="material-list">
-          <div class="material-item" v-for="(material, index) in materials" :key="index">
-            <div class="item-preview">
-              <span class="item-duration">{{ material.duration }}</span>
-              <button v-if="isEditing" @click="removeMaterial(index)" class="remove-btn">×</button>
-            </div>
-            <div v-if="!isEditing">
-              <h5 class="item-header">{{ material.title }}</h5>
-              <p class="item-description">{{ material.description }}</p>
-            </div>
-            <div v-else class="edit-material">
-              <input v-model="material.title" class="material-title-input">
-              <textarea v-model="material.description" class="material-desc-input"></textarea>
-            </div>
+          <h4>{{ block.title }}</h4>
+          <p>ID: {{ block.id }}</p>
+          <p>Порядок: {{ block.sortOrder ?? '—' }}</p>
+          <p>Доступен: {{ block.isAvailable ? 'да' : 'нет' }}</p>
+          <p>Тест: {{ block.testId ?? '—' }}</p>
+          <div class="actions">
+            <button class="secondary" @click="toggleBlockStatus(block.id)">Переключить статус</button>
+            <button class="danger" @click="removeBlock(block.id)">Удалить</button>
           </div>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
+
+    <section class="admin-section">
+      <div class="section-header">
+        <div>
+          <h2>Пользователи</h2>
+          <p class="hint">/api/admin/users*</p>
+        </div>
+        <button class="primary" @click="loadUsers">Обновить</button>
+      </div>
+
+      <div class="card">
+        <div class="form-grid">
+          <label>
+            Страница
+            <input v-model.number="page" type="number" min="0">
+          </label>
+          <label>
+            Размер
+            <input v-model.number="size" type="number" min="1">
+          </label>
+        </div>
+        <button class="secondary" @click="loadUsers">Применить</button>
+
+        <p v-if="userError" class="error">{{ userError }}</p>
+        <div class="table-wrapper" v-if="users.length">
+          <table>
+            <thead>
+            <tr>
+              <th>ID</th>
+              <th>Имя</th>
+              <th>Email</th>
+              <th>Роль</th>
+              <th>Статус</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="user in users" :key="user.id" @click="selectedUserId = user.id" :class="{ selected: selectedUserId === user.id }">
+              <td>{{ user.id }}</td>
+              <td>{{ user.firstName }} {{ user.lastName }}</td>
+              <td>{{ user.email }}</td>
+              <td>{{ user.role }}</td>
+              <td>{{ user.status }}</td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            ID пользователя
+            <input v-model="selectedUserId" placeholder="Выберите из таблицы или введите">
+          </label>
+          <label>
+            Имя
+            <input v-model="userUpdate.firstName" placeholder="firstName">
+          </label>
+          <label>
+            Фамилия
+            <input v-model="userUpdate.lastName" placeholder="lastName">
+          </label>
+          <label>
+            Email
+            <input v-model="userUpdate.email" placeholder="email">
+          </label>
+          <label>
+            Статус (enum)
+            <input v-model="userUpdate.status" placeholder="ACTIVE/BANNED...">
+          </label>
+          <label>
+            Роль (enum)
+            <input v-model="userUpdate.role" placeholder="USER/ADMIN...">
+          </label>
+          <label>
+            Дата оплаты
+            <input v-model="userUpdate.paymentDate" type="datetime-local">
+          </label>
+        </div>
+        <button class="primary" @click="patchUser">Обновить пользователя</button>
+      </div>
+    </section>
+
+    <section class="admin-section">
+      <div class="section-header">
+        <div>
+          <h2>Видео / поток</h2>
+          <p class="hint">/api/v1/videos*</p>
+        </div>
+        <button class="primary" @click="loadVideos">Обновить</button>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Список видео</h3>
+          <p v-if="videoError" class="error">{{ videoError }}</p>
+          <ul class="videos">
+            <li v-for="video in videos" :key="video.id">
+              <button class="link" @click="fetchVideoDetails(video.id)">
+                {{ video.title }} (id: {{ video.id }})
+              </button>
+              <div class="hint">{{ video.formattedDuration }} • {{ video.formattedFileSize }}</div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>Информация о видео</h3>
+          <label>
+            Video ID
+            <input v-model.number="selectedVideoId" type="number" min="0">
+          </label>
+          <div class="actions">
+            <button class="secondary" @click="fetchVideoDetails()">Получить информацию</button>
+            <button class="secondary" @click="fetchContentType">Content-Type</button>
+          </div>
+          <p v-if="contentType">MIME: {{ contentType }}</p>
+          <div v-if="videoInfo" class="video-info">
+            <p><strong>{{ videoInfo.title }}</strong></p>
+            <p>{{ videoInfo.description }}</p>
+            <p>Готово к стриму: {{ videoInfo.isReady ? 'да' : 'нет' }}</p>
+            <p>Чанков: {{ videoInfo.totalChunks }}</p>
+          </div>
+          <label>
+            Номер чанка
+            <input v-model.number="chunkIndex" type="number" min="0">
+          </label>
+          <button class="secondary" @click="fetchChunk">Запросить чанк</button>
+          <p v-if="chunkMessage">{{ chunkMessage }}</p>
+
+          <div v-if="streamUrl" class="video-player">
+            <video :src="streamUrl" controls width="320" height="180"></video>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Загрузить видео</h3>
+          <label>
+            Файл
+            <input type="file" accept="video/*" @change="onVideoFileChange">
+          </label>
+          <label>
+            Название
+            <input v-model="newVideo.title" placeholder="Название видео">
+          </label>
+          <label>
+            Описание
+            <textarea v-model="newVideo.description" rows="3" placeholder="Описание видео"></textarea>
+          </label>
+          <button class="primary" @click="uploadNewVideo">Загрузить</button>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.course-container {
-  padding: 0 100px;
+.admin-container {
+  padding: 30px 50px;
   width: 100%;
 }
 
-.meta-tag {
-  display: inline-block;
-  border: #f1f1f1 solid 1px;
-  border-radius: 15px;
-  padding: 5px 20px;
-  height: 20px;
-  margin-right: 10px;
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 10px;
 }
 
-.content-section {
-  margin: 10px 0;
+.status {
+  background: #f1f8ff;
+  border: 1px solid #b6d7ff;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.hint {
+  color: #7a7a7a;
+  margin: 4px 0;
+}
+
+.admin-section {
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+  background: #fff;
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 0;
-  border-bottom: 0.5px solid #e0e0e0;
-  user-select: none;
 }
 
-.toggle-icon {
-  font-size: 18px;
-  transition: transform 0.3s ease;
-}
-
-.material-list {
+.grid {
   display: grid;
-  margin: 20px 0;
-  grid-template-columns: repeat(auto-fill, 300px);
-  gap: 20px;
-  justify-content: center;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
 }
 
-.material-item {
-  height: 270px;
+.card {
   border: 1px solid #e0e0e0;
-  border-radius: 15px;
-  overflow: hidden;
-  position: relative;
+  border-radius: 12px;
+  padding: 16px;
+  background: #fafafa;
 }
 
-.item-preview {
-  position: relative;
-  background-image: url(https://avatars.mds.yandex.net/i?id=57b6f6ee1e1c40386ef66bc8a18f6b19e079f0ef-4103093-images-thumbs&n=13);
-  height: 200px;
-  width: 300px;
-  background-size: cover;
-  border-bottom: 1px solid #e0e0e0;
+input,
+textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  margin: 6px 0;
+  font: inherit;
 }
 
-.item-duration {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  background: rgba(0,0,0,0.7);
-  color: white;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 12px;
+textarea {
+  resize: vertical;
 }
 
-.item-header {
-  padding: 0 10px;
-  margin: 10px 0;
+button {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font: inherit;
 }
 
-.item-description {
-  padding: 0 10px;
-  margin: 0;
-  font-size: 14px;
-  color: #666;
-}
-
-.course-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.instructor-info {
-  display: flex;
-  align-items: center;
-  gap: 25px;
-}
-
-.instructor-name {
-  margin: 5px 0;
-}
-
-.instructor-description {
-  margin: 0;
-}
-
-.instructor-avatar {
-  width: 50px;
-  height: 50px;
-  border-radius: 25px;
-}
-
-/* Стили для админ-панели */
-.edit-btn, .save-btn, .add-btn {
+.primary {
   background: #007bff;
   color: white;
-  border: none;
-  padding: 10px 20px;
+}
+
+.secondary {
+  background: #17a2b8;
+  color: white;
+}
+
+.danger {
+  background: #dc3545;
+  color: white;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.block-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.block-card {
+  background: #fff;
+}
+
+.block-cover img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
   border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
+}
+
+.error {
+  color: #c0392b;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border: 1px solid #e0e0e0;
+  padding: 8px;
+  text-align: left;
+}
+
+tr.selected {
+  background: #f1f8ff;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
   margin: 10px 0;
 }
 
-.save-btn {
-  background: #28a745;
+.videos {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.add-btn {
-  background: #17a2b8;
-  width: 100%;
-  margin-top: 10px;
+.videos li {
+  margin-bottom: 8px;
 }
 
-.remove-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: #dc3545;
-  color: white;
-  border: none;
-  width: 25px;
-  height: 25px;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.link {
+  background: transparent;
+  color: #007bff;
+  padding: 0;
 }
 
-.course-title-input, .course-description-input {
-  width: 100%;
-  border: 1px solid #e0e0e0;
+.video-info {
+  background: #f8f8f8;
   border-radius: 8px;
   padding: 10px;
-  margin: 5px 0;
-  font-size: 16px;
+  margin: 8px 0;
 }
 
-.course-title-input {
-  font-size: 24px;
-  font-weight: bold;
-}
-
-.course-description-input {
-  font-size: 14px;
-  resize: vertical;
-}
-
-.meta-input, .meta-select {
-  border: 1px solid #e0e0e0;
-  border-radius: 15px;
-  padding: 5px 10px;
-  width: 100%;
-}
-
-.description-textarea {
-  width: 100%;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 15px;
-  resize: vertical;
-  min-height: 100px;
-}
-
-.add-material-form {
-  background: #f8f9fa;
-  padding: 20px;
-  border-radius: 10px;
-  margin: 20px 0;
-}
-
-.form-row {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.material-input, .material-textarea {
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 10px;
-  flex: 1;
-}
-
-.material-textarea {
-  width: 100%;
-  resize: vertical;
-  min-height: 60px;
-}
-
-.edit-material {
-  padding: 10px;
-}
-
-.material-title-input, .material-desc-input {
-  width: 100%;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  padding: 8px;
-  margin-bottom: 5px;
-  font-size: 14px;
-}
-
-.material-desc-input {
-  resize: vertical;
-  min-height: 40px;
-  font-size: 12px;
+.video-player {
+  margin-top: 12px;
 }
 </style>
