@@ -1,0 +1,16 @@
+ALTER TABLE blocks
+DROP COLUMN content_id;
+
+ALTER TABLE blocks
+DROP CONSTRAINT chk_test_or_video;
+
+ALTER TABLE blocks
+    ADD COLUMN is_available BOOLEAN NOT NULL DEFAULT TRUE;
+
+ALTER TABLE blocks
+    DROP COLUMN image_id,
+    DROP COLUMN video_id;
+
+ALTER TABLE blocks
+    ADD COLUMN has_image BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN has_video BOOLEAN NOT NULL DEFAULT FALSE;

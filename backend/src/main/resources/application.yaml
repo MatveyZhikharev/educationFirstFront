@@ -1,0 +1,67 @@
+global:
+  domain: ${DOMAIN}
+
+spring:
+  application:
+    name: EducationalPlatform
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+    jpa:
+      open-in-view: false
+      show-sql: false
+      properties:
+        hibernate:
+          format_sql: true
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        ddl-auto: validate
+
+    flyway:
+      enabled: true
+      baseline-on-migrate: true
+      clean-on-validation-error: true
+      validate-on-migrate: true
+
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+      enabled: true
+
+management:
+  endpoints:
+    web:
+      base-path: /api/actuator
+      exposure:
+        include: health
+
+jwt:
+  name: jwt_token
+  secret: 53A73E5F1C4E0A2D3B5F2D784E6A1B423D6F247D1F6E5C3A596D635A75327855
+  expiration: 155520000000
+
+vk:
+  app-id: 54299133
+  secret: pJcJlRld2MwdAFpOGv5b
+  redirect-uri: https://free.testeduplatform.tw1.ru/api/auth/vkCallback
+  redirect-uri-after: /
+
+minio:
+  endpoint: ${MINIO_ENDPOINT}
+  access-key: ${MINIO_ACCESS_KEY}
+  secret-key: ${MINIO_SECRET_KEY}
+  bucket-name: ${MINIO_BUCKET_NAME}
+
+springdoc:
+  api-docs:
+    path: /api/api-docs
+  swagger-ui:
+    path: /api/swagger-ui.html
+
+server:
+  port: ${APP_PORT}
