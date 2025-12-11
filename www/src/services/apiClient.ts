@@ -8,7 +8,7 @@ const api = axios.create({
 export const blockImageUrl = (blockId: number | string) => `/api/blocks/${blockId}/image`
 export const streamVideoUrl = (videoId: number | string) => `/api/v1/videos/${videoId}/stream`
 
-const withDeviceId = (deviceId?: string) => ({ device_id: deviceId })
+const withDeviceId = (deviceId?: string) => (deviceId ? { device_id: deviceId } : {})
 const HTTP_CLIENT_ERROR_THRESHOLD = 400
 
 export const apiClient = {

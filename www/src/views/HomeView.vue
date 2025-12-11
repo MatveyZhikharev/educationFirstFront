@@ -83,7 +83,7 @@ onMounted(fetchBlocks)
         <div v-else-if="isMaterialVisible" class="material-list">
           <div class="material-item" v-for="block in blocks" :key="block.id">
             <div class="item-preview">
-              <img :src="blockImageUrl(block.id)" alt="cover" class="item-image" />
+              <img :src="blockImageUrl(block.id)" :alt="`Обложка блока ${block.title}`" class="item-image" />
             </div>
             <h5 class="item-header">{{ block.title }}</h5>
           </div>

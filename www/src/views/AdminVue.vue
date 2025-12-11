@@ -86,9 +86,12 @@ const formatPaymentDate = (value: string) => (value ? new Date(value).toISOStrin
 const computeChunkSize = (data: unknown): number => {
   let size = 0
   if (isChunkResponse(data)) {
-    if (Array.isArray(data.encryptedData)) size = data.encryptedData.length
-    else if (typeof data.encryptedData === 'string') size = data.encryptedData.length
-    else if (typeof data.byteLength === 'number') size = data.byteLength
+    const encrypted = data.encryptedData
+    if (Array.isArray(encrypted) || typeof encrypted === 'string') {
+      size = encrypted.length
+    } else if (typeof data.byteLength === 'number') {
+      size = data.byteLength
+    }
   } else if (Array.isArray(data)) {
     size = data.length
   }
@@ -212,7 +215,7 @@ const patchUser = async () => {
   const payload: Record<string, unknown> = {}
   Object.entries(userUpdate).forEach(([key, value]) => {
     if (value !== '' && value !== null && value !== undefined) {
-      payload[key] = key === PAYMENT_DATE_FIELD ? formatPaymentDate(value as string) : value
+      payload[key] = key === PAYMENT_DATE_FIELD ? formatPaymentDate(String(value)) : value
     }
   })
 
@@ -370,7 +373,7 @@ onMounted(() => {
       <div class="block-list">
         <div v-for="block in adminBlocks" :key="block.id" class="card block-card">
           <div class="block-cover">
-            <img :src="blockImageUrl(block.id)" alt="block cover">
+            <img :src="blockImageUrl(block.id)" :alt="`Обложка блока ${block.title}`">
           </div>
           <h4>{{ block.title }}</h4>
           <p>ID: {{ block.id }}</p>
