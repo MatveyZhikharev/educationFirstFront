@@ -67,11 +67,11 @@ li {
 }
 
 .active nav ul li .btn-description {
-  width: 100%!important;
+  width: 100%;
   opacity: 100%;
 }
 
 .active nav ul {
-  width: 170px!important;
+  width: 170px;
 }
 </style>

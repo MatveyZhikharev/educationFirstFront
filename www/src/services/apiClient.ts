@@ -46,6 +46,7 @@ export const apiClient = {
         state: params.state,
         device_id: params.deviceId,
       },
+      // VK колбэк может отдавать редирект, поэтому отключаем авто-редиректы и считаем 3xx валидными
       maxRedirects: 0,
       validateStatus: (status) => status < 400,
     }),

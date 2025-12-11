@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import type { AxiosError } from 'axios'
 import { apiClient, blockImageUrl } from '@/services/apiClient'
 
 type BlockResponse = {
@@ -19,6 +20,14 @@ const toggleMaterials = () => {
   isMaterialVisible.value = !isMaterialVisible.value
 }
 
+const resolveError = (e: unknown, fallback: string) => {
+  if (typeof e === 'object' && e !== null && 'response' in e) {
+    const err = e as AxiosError<{ message?: string }>
+    return err.response?.data?.message ?? fallback
+  }
+  return fallback
+}
+
 const fetchBlocks = async () => {
   isLoading.value = true
   error.value = ''
@@ -28,8 +37,8 @@ const fetchBlocks = async () => {
     if (data?.length) {
       isMaterialVisible.value = true
     }
-  } catch (e: any) {
-    error.value = e?.response?.data?.message || 'Не удалось загрузить блоки'
+  } catch (e: unknown) {
+    error.value = resolveError(e, 'Не удалось загрузить блоки')
   } finally {
     isLoading.value = false
   }

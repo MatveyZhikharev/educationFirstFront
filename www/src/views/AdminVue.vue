@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import type { AxiosError } from 'axios'
 import { apiClient, blockImageUrl, streamVideoUrl } from '@/services/apiClient'
 
 type BlockResponse = {
@@ -77,6 +78,14 @@ const newVideoFile = ref<File | null>(null)
 
 const statusMessage = ref('')
 
+const resolveError = (e: unknown, fallback: string) => {
+  if (typeof e === 'object' && e !== null && 'response' in e) {
+    const err = e as AxiosError<{ message?: string }>
+    return err.response?.data?.message ?? fallback
+  }
+  return fallback
+}
+
 const streamUrl = computed(() => (selectedVideoId.value != null ? streamVideoUrl(selectedVideoId.value) : ''))
 
 const loadBlocks = async () => {
@@ -85,8 +94,8 @@ const loadBlocks = async () => {
   try {
     const { data } = await apiClient.getAdminBlocks()
     adminBlocks.value = data
-  } catch (e: any) {
-    blocksError.value = e?.response?.data?.message || 'Не удалось загрузить блоки'
+  } catch (e: unknown) {
+    blocksError.value = resolveError(e, 'Не удалось загрузить блоки')
   } finally {
     isLoadingBlocks.value = false
   }
@@ -99,8 +108,8 @@ const createBlock = async () => {
     newBlockTitle.value = ''
     statusMessage.value = 'Блок создан'
     await loadBlocks()
-  } catch (e: any) {
-    statusMessage.value = e?.response?.data?.message || 'Ошибка создания блока'
+  } catch (e: unknown) {
+    statusMessage.value = resolveError(e, 'Ошибка создания блока')
   }
 }
 
@@ -109,8 +118,8 @@ const toggleBlockStatus = async (blockId: number) => {
     await apiClient.toggleBlockStatus(blockId)
     statusMessage.value = 'Статус блока обновлён'
     await loadBlocks()
-  } catch (e: any) {
-    statusMessage.value = e?.response?.data?.message || 'Не удалось изменить статус блока'
+  } catch (e: unknown) {
+    statusMessage.value = resolveError(e, 'Не удалось изменить статус блока')
   }
 }
 
@@ -119,8 +128,8 @@ const removeBlock = async (blockId: number) => {
     await apiClient.deleteBlock(blockId)
     statusMessage.value = 'Блок удалён'
     await loadBlocks()
-  } catch (e: any) {
-    statusMessage.value = e?.response?.data?.message || 'Не удалось удалить блок'
+  } catch (e: unknown) {
+    statusMessage.value = resolveError(e, 'Не удалось удалить блок')
   }
 }
 
@@ -130,8 +139,8 @@ const swapBlocksAction = async () => {
     await apiClient.swapBlocks(Number(swapPayload.firstId), Number(swapPayload.secondId))
     statusMessage.value = 'Блоки поменяны местами'
     await loadBlocks()
-  } catch (e: any) {
-    statusMessage.value = e?.response?.data?.message || 'Не удалось поменять блоки местами'
+  } catch (e: unknown) {
+    statusMessage.value = resolveError(e, 'Не удалось поменять блоки местами')
   }
 }
 
@@ -144,8 +153,8 @@ const updateBlockText = async () => {
     })
     statusMessage.value = 'Блок обновлён'
     await loadBlocks()
-  } catch (e: any) {
-    statusMessage.value = e?.response?.data?.message || 'Не удалось обновить блок'
+  } catch (e: unknown) {
+    statusMessage.value = resolveError(e, 'Не удалось обновить блок')
   }
 }
 
@@ -154,8 +163,8 @@ const uploadBlockImage = async () => {
   try {
     await apiClient.updateBlockImage(Number(uploadPayload.blockId), uploadPayload.image)
     statusMessage.value = 'Изображение обновлено'
-  } catch (e: any) {
-    statusMessage.value = e?.response?.data?.message || 'Не удалось загрузить изображение'
+  } catch (e: unknown) {
+    statusMessage.value = resolveError(e, 'Не удалось загрузить изображение')
   }
 }
 
@@ -164,8 +173,8 @@ const uploadBlockVideo = async () => {
   try {
     await apiClient.updateBlockVideo(Number(uploadPayload.blockId), uploadPayload.video)
     statusMessage.value = 'Видео обновлено'
-  } catch (e: any) {
-    statusMessage.value = e?.response?.data?.message || 'Не удалось загрузить видео'
+  } catch (e: unknown) {
+    statusMessage.value = resolveError(e, 'Не удалось загрузить видео')
   }
 }
 
@@ -184,8 +193,8 @@ const loadUsers = async () => {
   try {
     const { data } = await apiClient.getUsers(page.value, size.value)
     users.value = data?.content ?? data
-  } catch (e: any) {
-    userError.value = e?.response?.data?.message || 'Не удалось загрузить пользователей'
+  } catch (e: unknown) {
+    userError.value = resolveError(e, 'Не удалось загрузить пользователей')
   }
 }
 
@@ -207,8 +216,8 @@ const patchUser = async () => {
     await apiClient.updateUser(selectedUserId.value, payload)
     statusMessage.value = 'Пользователь обновлён'
     await loadUsers()
-  } catch (e: any) {
-    statusMessage.value = e?.response?.data?.message || 'Не удалось обновить пользователя'
+  } catch (e: unknown) {
+    statusMessage.value = resolveError(e, 'Не удалось обновить пользователя')
   }
 }
 
@@ -217,8 +226,8 @@ const loadVideos = async () => {
   try {
     const { data } = await apiClient.getVideos()
     videos.value = data
-  } catch (e: any) {
-    videoError.value = e?.response?.data?.message || 'Не удалось загрузить видео'
+  } catch (e: unknown) {
+    videoError.value = resolveError(e, 'Не удалось загрузить видео')
   }
 }
 
@@ -229,8 +238,8 @@ const fetchVideoDetails = async (videoId?: number | null) => {
     const { data } = await apiClient.getVideoInfo(id)
     videoInfo.value = data
     selectedVideoId.value = id
-  } catch (e: any) {
-    videoError.value = e?.response?.data?.message || 'Не удалось получить информацию о видео'
+  } catch (e: unknown) {
+    videoError.value = resolveError(e, 'Не удалось получить информацию о видео')
   }
 }
 
@@ -239,8 +248,8 @@ const fetchContentType = async () => {
   try {
     const { data } = await apiClient.getVideoContentType(selectedVideoId.value)
     contentType.value = data
-  } catch (e: any) {
-    videoError.value = e?.response?.data?.message || 'Не удалось получить content-type'
+  } catch (e: unknown) {
+    videoError.value = resolveError(e, 'Не удалось получить content-type')
   }
 }
 
@@ -257,8 +266,8 @@ const fetchChunk = async () => {
       size = data.length
     }
     chunkMessage.value = `Чанк ${data?.chunkIndex ?? chunkIndex.value}: получено ${size} байт`
-  } catch (e: any) {
-    videoError.value = e?.response?.data?.message || 'Не удалось получить чанк'
+  } catch (e: unknown) {
+    videoError.value = resolveError(e, 'Не удалось получить чанк')
   }
 }
 
@@ -279,8 +288,8 @@ const uploadNewVideo = async () => {
     newVideo.title = ''
     newVideo.description = ''
     await loadVideos()
-  } catch (e: any) {
-    statusMessage.value = e?.response?.data?.message || 'Не удалось загрузить видео'
+  } catch (e: unknown) {
+    statusMessage.value = resolveError(e, 'Не удалось загрузить видео')
   }
 }
 
