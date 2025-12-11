@@ -8,6 +8,8 @@ const api = axios.create({
 export const blockImageUrl = (blockId: number | string) => `/api/blocks/${blockId}/image`
 export const streamVideoUrl = (videoId: number | string) => `/api/v1/videos/${videoId}/stream`
 
+const withDeviceId = (deviceId?: string) => ({ device_id: deviceId })
+
 export const apiClient = {
   // Public blocks
   getBlocks: () => api.get('/blocks'),
@@ -37,14 +39,14 @@ export const apiClient = {
     api.patch(`/admin/users/${userId}`, payload),
 
   // Auth
-  getAuthUrl: (deviceId?: string) => api.get('/auth/vkUrl', { params: { device_id: deviceId } }),
+  getAuthUrl: (deviceId?: string) => api.get('/auth/vkUrl', { params: withDeviceId(deviceId) }),
   getAuthStatus: () => api.get('/auth/status'),
   sendVkCallback: (params: { code: string; state: string; deviceId: string }) =>
     api.get('/auth/vkCallback', {
       params: {
         code: params.code,
         state: params.state,
-        device_id: params.deviceId,
+        ...withDeviceId(params.deviceId),
       },
       // VK колбэк отдаёт редирект в браузер, а фронт вызывает его для проверки.
       // Отключаем авто-редиректы и разрешаем 3xx, чтобы вручную обработать ответ без смены location.

@@ -2,14 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { apiClient, blockImageUrl, streamVideoUrl } from '@/services/apiClient'
 import { resolveError } from '@/utils/error'
-
-type BlockResponse = {
-  id: number
-  title: string
-  sortOrder: number
-  isAvailable: boolean
-  testId?: number | null
-}
+import type { BlockResponse } from '@/types/api'
 
 type UserResponse = {
   id: string
@@ -77,21 +70,25 @@ const newVideo = reactive({ title: '', description: '' })
 const newVideoFile = ref<File | null>(null)
 
 const statusMessage = ref('')
+const PAYMENT_DATE_FIELD = 'paymentDate'
 
-const formatPaymentDate = (value: string) =>
-  value ? new Date(value).toISOString() : ''
+type ChunkResponse = {
+  encryptedData?: Uint8Array | number[] | string
+  byteLength?: number
+  chunkIndex?: number
+}
+
+const isChunkResponse = (data: unknown): data is ChunkResponse =>
+  typeof data === 'object' && data !== null
+
+const formatPaymentDate = (value: string) => (value ? new Date(value).toISOString() : '')
 
 const computeChunkSize = (data: unknown): number => {
-  if (Array.isArray((data as any)?.encryptedData)) {
-    return (data as any).encryptedData.length
-  }
-  if (typeof (data as any)?.encryptedData === 'string') {
-    return (data as any).encryptedData.length
-  }
-  if (typeof (data as any)?.byteLength === 'number') {
-    return (data as any).byteLength
-  }
-  if (Array.isArray(data)) {
+  if (isChunkResponse(data)) {
+    if (Array.isArray(data.encryptedData)) return data.encryptedData.length
+    if (typeof data.encryptedData === 'string') return data.encryptedData.length
+    if (typeof data.byteLength === 'number') return data.byteLength
+  } else if (Array.isArray(data)) {
     return data.length
   }
   return 0
@@ -214,7 +211,7 @@ const patchUser = async () => {
   const payload: Record<string, unknown> = {}
   Object.entries(userUpdate).forEach(([key, value]) => {
     if (value !== '' && value !== null && value !== undefined) {
-      payload[key] = key === 'paymentDate' ? formatPaymentDate(value as string) : value
+      payload[key] = key === PAYMENT_DATE_FIELD ? formatPaymentDate(value as string) : value
     }
   })
 

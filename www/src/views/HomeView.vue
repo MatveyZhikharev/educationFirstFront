@@ -2,14 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { apiClient, blockImageUrl } from '@/services/apiClient'
 import { resolveError } from '@/utils/error'
-
-type BlockResponse = {
-  id: number
-  title: string
-  sortOrder: number
-  isAvailable: boolean
-  testId?: number | null
-}
+import type { BlockResponse } from '@/types/api'
 
 const isMaterialVisible = ref(false)
 const blocks = ref<BlockResponse[]>([])
