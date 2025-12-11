@@ -1,42 +1,35 @@
-<script lang="ts">
-export default {
-  data() {
-    return {
-      isMaterialVisible: false,
-      materials: [
-        {
-          title: "Знакомство",
-          description: "Вводный урок по ремонту техники",
-          preview: "",
-          duration: "48:52"
-        },
-        {
-          title: "Знакомство",
-          description: "",
-          preview: "",
-          duration: ""
-        },
-        {
-          title: "Знакомство",
-          description: "",
-          preview: "",
-          duration: ""
-        },
-        {
-          title: "Знакомство",
-          description: "",
-          preview: "",
-          duration: ""
-        }
-      ]
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { apiClient, blockImageUrl } from '@/services/apiClient'
+import { resolveError } from '@/utils/error'
+import type { BlockResponse } from '@/types/api'
+
+const isMaterialVisible = ref(false)
+const blocks = ref<BlockResponse[]>([])
+const isLoading = ref(false)
+const error = ref('')
+
+const toggleMaterials = () => {
+  isMaterialVisible.value = !isMaterialVisible.value
+}
+
+const fetchBlocks = async () => {
+  isLoading.value = true
+  error.value = ''
+  try {
+    const { data } = await apiClient.getBlocks()
+    blocks.value = data
+    if (data?.length) {
+      isMaterialVisible.value = true
     }
-  },
-  methods: {
-    toggleMaterials() {
-      this.isMaterialVisible = !this.isMaterialVisible
-    }
+  } catch (e: unknown) {
+    error.value = resolveError(e, 'Не удалось загрузить блоки')
+  } finally {
+    isLoading.value = false
   }
 }
+
+onMounted(fetchBlocks)
 </script>
 
 <template>
@@ -82,18 +75,20 @@ export default {
 
       <section class="content-section">
         <div class="section-header" @click="toggleMaterials">
-          <h2 class="section-title">Материалы курса</h2>
+          <h2 class="section-title">Опубликованные блоки</h2>
           <div class="toggle-icon">{{ isMaterialVisible ? '▼' : '▶' }}</div>
         </div>
-        <div v-show="isMaterialVisible" class="material-list">
-          <div class="material-item" v-for="material in materials">
+        <div v-if="isLoading" class="status-text">Загружаем блоки...</div>
+        <div v-else-if="error" class="status-text error">{{ error }}</div>
+        <div v-else-if="isMaterialVisible" class="material-list">
+          <div class="material-item" v-for="block in blocks" :key="block.id">
             <div class="item-preview">
-              <span class="item-duration">{{ material.duration }}</span>
+              <img :src="blockImageUrl(block.id)" :alt="`Обложка блока ${block.title}`" class="item-image" />
             </div>
-            <h5 class="item-header">{{ material.title }}</h5>
-            <p class="item-description">{{ material.description }}</p>
+            <h5 class="item-header">{{ block.title }}</h5>
           </div>
         </div>
+        <p v-if="!isLoading && !blocks.length" class="status-text">Опубликованные блоки не найдены.</p>
       </section>
     </div>
   </div>
@@ -149,17 +144,10 @@ export default {
 
 .item-preview {
   position: relative;
-  background-image: url(https://avatars.mds.yandex.net/i?id=57b6f6ee1e1c40386ef66bc8a18f6b19e079f0ef-4103093-images-thumbs&n=13);
   height: 200px;
   width: 300px;
   background-size: cover;
   border-bottom: 1px solid #e0e0e0;
-}
-
-.item-duration {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
 }
 
 .item-header {
@@ -170,6 +158,20 @@ export default {
 .item-description {
   padding: 0 10px;
   margin: 0;
+}
+
+.item-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.status-text {
+  padding: 10px 0;
+}
+
+.status-text.error {
+  color: #c0392b;
 }
 
 .course-meta {

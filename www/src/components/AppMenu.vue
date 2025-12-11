@@ -1,39 +1,27 @@
-<script lang="js">
-export default {
-  mounted() {
-    let aside = document.querySelector("aside");
-    let menus = document.querySelectorAll(".btn-description");
-    aside.addEventListener("mouseenter", (e) => {
-      aside.classList.add("active");
-    })
+<script setup lang="ts">
+import { ref } from 'vue'
+import { RouterLink } from 'vue-router'
 
-    aside.addEventListener("mouseleave", (e) => {
-      aside.classList.remove("active");
-    })
-
-  }
-}
-
+const isActive = ref(false)
+const menuItems = [
+  { to: '/', label: 'Главная', icon: new URL('../assets/main-page.png', import.meta.url).href },
+  { to: '/my-courses', label: 'Мои курсы', icon: new URL('../assets/folder.png', import.meta.url).href },
+  { to: '/courses', label: 'Каталог курсов', icon: new URL('../assets/catalog.png', import.meta.url).href },
+  { to: '/sales', label: 'Акции', icon: new URL('../assets/sale.png', import.meta.url).href },
+  { to: '/profile', label: 'Профиль', icon: new URL('../assets/profile.png', import.meta.url).href },
+  { to: '/admin', label: 'Админ', icon: new URL('../assets/catalog.png', import.meta.url).href },
+]
 </script>
 
 <template>
-  <aside>
+  <aside :class="{ active: isActive }" @mouseenter="isActive = true" @mouseleave="isActive = false">
     <nav>
       <ul>
-        <li class="btn section-type"><img src="../assets/main-page.png" alt="" width="20px">
-          <span class="btn-description">&nbsp;&nbsp;&nbsp;&nbsp;Главная</span>
-        </li>
-        <li class="btn section-type"><img src="../assets/folder.png" alt="" width="20px">
-          <span class="btn-description">&nbsp;&nbsp;&nbsp;&nbsp;Мои курсы</span>
-        </li>
-        <li class="btn section-type"><img src="../assets/catalog.png" alt="" width="20px">
-          <span class="btn-description">&nbsp;&nbsp;&nbsp;&nbsp;Каталог курсов</span>
-        </li>
-        <li class="btn section-type"><img src="../assets/sale.png" alt="" width="20px">
-          <span class="btn-description">&nbsp;&nbsp;&nbsp;&nbsp;Акции</span>
-        </li>
-        <li class="btn section-type"><img src="../assets/profile.png" alt="" width="20px">
-          <span class="btn-description">&nbsp;&nbsp;&nbsp;&nbsp;Профиль</span>
+        <li v-for="item in menuItems" :key="item.to" class="btn section-type">
+          <RouterLink :to="item.to" class="menu-link">
+            <img :src="item.icon" alt="" width="20px">
+            <span class="btn-description">{{ item.label }}</span>
+          </RouterLink>
         </li>
       </ul>
     </nav>
@@ -54,11 +42,20 @@ ul {
   gap: 30px;
   flex-direction: column;
   list-style-type: none;
+  width: 20px;
+  transition: width 0.5s;
 }
 
 li {
   display: flex;
   align-items: center;
+}
+
+.menu-link {
+  display: flex;
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
 }
 
 .btn-description {
@@ -67,20 +64,15 @@ li {
   overflow-x: hidden;
   text-wrap: nowrap;
   transition: width 0.5s;
+  margin-left: 12px;
 }
 
 .active nav ul li .btn-description {
-  width: 100%!important;
+  width: 100%;
   opacity: 100%;
 }
 
-ul {
-  width: 20px;
-  transition: width 0.5s;
-}
-
 .active nav ul {
-  width: 160px!important;
+  width: 170px;
 }
-
 </style>
