@@ -37,7 +37,6 @@ header {
 }
 
 .menu-logo {
-  /* margin: 30px 90px 50px 60px; */
 }
 
 .search-input {

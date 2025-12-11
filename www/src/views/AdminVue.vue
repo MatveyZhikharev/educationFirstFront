@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import type { AxiosError } from 'axios'
 import { apiClient, blockImageUrl, streamVideoUrl } from '@/services/apiClient'
+import { resolveError } from '@/utils/error'
 
 type BlockResponse = {
   id: number
@@ -77,14 +77,6 @@ const newVideo = reactive({ title: '', description: '' })
 const newVideoFile = ref<File | null>(null)
 
 const statusMessage = ref('')
-
-const resolveError = (e: unknown, fallback: string) => {
-  if (typeof e === 'object' && e !== null && 'response' in e) {
-    const err = e as AxiosError<{ message?: string }>
-    return err.response?.data?.message ?? fallback
-  }
-  return fallback
-}
 
 const streamUrl = computed(() => (selectedVideoId.value != null ? streamVideoUrl(selectedVideoId.value) : ''))
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import type { AxiosError } from 'axios'
 import { apiClient, blockImageUrl } from '@/services/apiClient'
+import { resolveError } from '@/utils/error'
 
 type BlockResponse = {
   id: number
@@ -18,14 +18,6 @@ const error = ref('')
 
 const toggleMaterials = () => {
   isMaterialVisible.value = !isMaterialVisible.value
-}
-
-const resolveError = (e: unknown, fallback: string) => {
-  if (typeof e === 'object' && e !== null && 'response' in e) {
-    const err = e as AxiosError<{ message?: string }>
-    return err.response?.data?.message ?? fallback
-  }
-  return fallback
 }
 
 const fetchBlocks = async () => {

@@ -20,7 +20,7 @@ const menuItems = [
         <li v-for="item in menuItems" :key="item.to" class="btn section-type">
           <RouterLink :to="item.to" class="menu-link">
             <img :src="item.icon" alt="" width="20px">
-            <span class="btn-description">&nbsp;&nbsp;&nbsp;&nbsp;{{ item.label }}</span>
+            <span class="btn-description">{{ item.label }}</span>
           </RouterLink>
         </li>
       </ul>
@@ -64,6 +64,7 @@ li {
   overflow-x: hidden;
   text-wrap: nowrap;
   transition: width 0.5s;
+  margin-left: 12px;
 }
 
 .active nav ul li .btn-description {

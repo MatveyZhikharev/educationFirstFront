@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import type { AxiosError } from 'axios'
 import { apiClient } from '@/services/apiClient'
+import { resolveError } from '@/utils/error'
 
 const deviceId = ref('')
 const authUrl = ref('')
@@ -14,14 +14,6 @@ const callbackForm = reactive({
   state: '',
   deviceId: '',
 })
-
-const resolveError = (e: unknown, fallback: string) => {
-  if (typeof e === 'object' && e !== null && 'response' in e) {
-    const err = e as AxiosError<{ message?: string }>
-    return err.response?.data?.message ?? fallback
-  }
-  return fallback
-}
 
 const runSafe = async (fn: () => Promise<void>) => {
   isLoading.value = true
